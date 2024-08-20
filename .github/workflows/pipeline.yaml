@@ -21,6 +21,7 @@ jobs:
         if: github.event.action != 'closed'
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
+          mkdir -p argocd/apps/${BRANCH_NAME}
           cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
           kubectl apply -f argocd/apps/${BRANCH_NAME}
 
