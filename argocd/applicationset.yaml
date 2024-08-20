@@ -7,20 +7,20 @@ spec:
   generators:
     - git:
         repoURL: 'https://github.com/danoshi/job-interview-task-gitops'
-        revision: HEAD
+        revision: '*'
         directories:
           - path: 'argocd/apps/*'
   template:
     metadata:
-      name: '{{ .path | basename }}-app'
+      name: '{{ .path | basename }}-{{ .branch }}'
     spec:
       project: default
       source:
         repoURL: 'https://github.com/danoshi/job-interview-task-gitops'
         path: '{{ .path }}'
-        targetRevision: HEAD
+        targetRevision: '{{ .branch }}'
       destination:
         server: 'https://kubernetes.default.svc'
-        namespace: '{{ .path | basename }}'
+        namespace: '{{ .branch }}'
       syncPolicy:
         automated: {}
