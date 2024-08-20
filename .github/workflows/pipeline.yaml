@@ -23,10 +23,13 @@ jobs:
         run: terraform init
         working-directory: ${{ env.TF_DIR }}
 
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+        working-directory: ${{ env.TF_DIR }}
+
       - name: Terraform Apply
         run: |
-          CLUSTER_NAME="${{ github.head_ref }}"
-          terraform apply -var name="${CLUSTER_NAME}" -auto-approve
+          terraform apply -var-file=dev.tfvars -auto-approve
         working-directory: ${{ env.TF_DIR }}
 
       - name: Set up kubectl
