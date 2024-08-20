@@ -24,7 +24,9 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Apply
-        run: terraform apply -var="name=${{ github.head_ref }}" -auto-approve
+        run: |
+          CLUSTER_NAME="${{ github.head_ref }}"
+          terraform apply -var name="${CLUSTER_NAME}" -auto-approve
         working-directory: ${{ env.TF_DIR }}
 
       - name: Set up kubectl
