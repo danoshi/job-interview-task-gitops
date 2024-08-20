@@ -1,8 +1,13 @@
 name: Deploy to Environment
 
 on:
-  pull_request:
-    types: [opened, closed]
+  push:
+    branches:
+      - master
+      - 'feature/job-interview-task'
+
+env:
+  TF_DIR: terraform/kind
 
 jobs:
   deploy:
@@ -11,19 +16,64 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: set branch name 
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        if: github.event_name == 'push'
+
+      - name: Set branch name for PR
+        run: echo "BRANCH_NAME=${GITHUB_HEAD_REF//\//-}" >> $GITHUB_ENV
+        if: github.event_name == 'pull_request'
+
+      - name: Terraform Destroy
+        run: terraform destroy -var="name=$BRANCH_NAME" -auto-approve
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -var="name=$BRANCH_NAME" -auto-approve
+        working-directory: ${{ env.TF_DIR }}
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Configure kubectl
-        run: kubectl config set-cluster kind-cluster --server=https://127.0.0.1:6443
+      - name: create argocd namespace
+        run: kubectl create namespace argocd
 
-      - name: Apply changes (Create Environment)
-        if: github.event.action != 'closed'
-        run: |
-          kubectl apply -f argocd/apps/${{ github.head_ref }}/
+      - name: argocd workload
+        run: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-      - name: Delete Environment
-        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+      - name: Wait for argo pods to be ready
+        run: kubectl wait --for=condition=Ready pods --all --namespace=argocd --timeout=5m
+
+      - name: port forwarding
+        run: kubectl -n argocd port-forward svc/argocd-server -n argocd 8083:80
+
+      # - name: get secret 
+      #   run: kubectl -n argocd get secrets argocd-initial-admin-secret -o json
+
+      - name: Deploy environment frontend, backend and traefik
         run: |
-          kubectl delete namespace ${{ github.head_ref }}
+          mkdir -p argocd/apps/${BRANCH_NAME}
+          cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
+          kubectl apply -f argocd/apps/${BRANCH_NAME}/
+
+      - name: Wait for backend, traefik to be ready
+        run: |
+          kubectl wait --for=condition=Ready pods --all --namespace=app --timeout=5m
+          kubectl wait --for=condition=Ready pods --all --namespace=traefik --timeout=5m
+
+      - name: Deploy environment addons
+        run: kubectl apply -f argocd/apps/${BRANCH_NAME}/addons/
+
+      - name: Terraform Destroy
+        if: ${{ github.event.pull_request.merged }}
+        run: terraform destroy -auto-approve
+        working-directory: ${{ env.TF_DIR }}
 

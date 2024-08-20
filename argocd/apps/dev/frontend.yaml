@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: frontend
   namespace: argocd
+  labels:
+    app: frontend
 spec:
   destination:
     namespace: app
