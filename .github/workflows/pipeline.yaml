@@ -49,11 +49,11 @@ jobs:
       - name: argocd workload
         run: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-      - name: port forwarding
-        run: kubectl -n argocd port-forward svc/argocd-server -n argocd 8083:80
-
       - name: Wait for argo pods to be ready
         run: kubectl wait --for=condition=Ready pods --all --namespace=argocd --timeout=5m
+
+      - name: port forwarding
+        run: kubectl -n argocd port-forward svc/argocd-server -n argocd 8083:80
 
       # - name: get secret 
       #   run: kubectl -n argocd get secrets argocd-initial-admin-secret -o json
