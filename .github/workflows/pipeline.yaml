@@ -17,13 +17,17 @@ jobs:
       - name: Configure kubectl
         run: kubectl config set-cluster kind-cluster --server=https://127.0.0.1:6443
 
-      - name: Apply changes (Create Environment)
+      - name: Deploy environment
         if: github.event.action != 'closed'
         run: |
-          kubectl apply -f argocd/apps/${{ github.head_ref }}/
+          BRANCH_NAME="${{ github.head_ref }}"
+          cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
+          kubectl apply -f argocd/apps/${BRANCH_NAME}
 
-      - name: Delete Environment
-        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+      - name: Cleanup environment
+        if: github.event.action == 'closed'
         run: |
-          kubectl delete namespace ${{ github.head_ref }}
+          BRANCH_NAME="${{ github.head_ref }}"
+          kubectl delete app ${BRANCH_NAME} -n argocd
+          rm -rf argocd/apps/${BRANCH_NAME}
 
