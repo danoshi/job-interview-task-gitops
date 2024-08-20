@@ -1,2 +1,5 @@
 .terraform
 test.sh
+*.tfstate
+*.tfstate.backup
+.DS_Store

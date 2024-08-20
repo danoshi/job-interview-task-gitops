@@ -23,13 +23,21 @@ jobs:
         run: terraform init
         working-directory: ${{ env.TF_DIR }}
 
+      - name: set branch name 
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        if: github.event_name == 'push'
+
+      - name: Set branch name for PR
+        run: echo "BRANCH_NAME=${GITHUB_HEAD_REF//\//-}" >> $GITHUB_ENV
+        if: github.event_name == 'pull_request'
+
       - name: Terraform Destroy
-        run: terraform destroy -var-file=dev.tfvars -auto-approve
+        run: terraform destroy -var="name=$BRANCH_NAME" -auto-approve
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Apply
         run: |
-          terraform apply -var-file=dev.tfvars -auto-approve
+          terraform apply -var="name=$BRANCH_NAME" -auto-approve
         working-directory: ${{ env.TF_DIR }}
 
       - name: Set up kubectl
@@ -43,7 +51,6 @@ jobs:
 
       - name: Deploy environment
         run: |
-          BRANCH_NAME="${{ github.head_ref }}"
           mkdir -p argocd/apps/${BRANCH_NAME}
           cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
           kubectl apply -R -f argocd/apps/${BRANCH_NAME}/
