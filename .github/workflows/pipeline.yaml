@@ -20,10 +20,10 @@ jobs:
       - name: Apply changes (Create Environment)
         if: github.event.action != 'closed'
         run: |
-          kubectl apply -f argocd/apps/{{ github.head_ref }}/
+          kubectl apply -f argocd/apps/${{ github.head_ref }}/
 
       - name: Delete Environment
         if: github.event.action == 'closed' && github.event.pull_request.merged == true
         run: |
-          kubectl delete namespace {{ github.head_ref }}
+          kubectl delete namespace ${{ github.head_ref }}
 
