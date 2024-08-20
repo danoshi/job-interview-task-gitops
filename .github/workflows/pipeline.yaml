@@ -37,14 +37,9 @@ jobs:
 
       - name: Set up kubeconfig
         run: |
+          mkdir -p $HOME/.kube
           terraform output -raw kubeconfig > $HOME/.kube/config
         working-directory: ${{ env.TF_DIR }}
-
-      - name: Output Kubeconfig
-        run: cat $HOME/.kube/config
-
-      # - name: Verify Kubernetes Connection
-      #   run: kubectl cluster-info
 
       - name: Deploy environment
         run: |
