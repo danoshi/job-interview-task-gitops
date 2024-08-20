@@ -38,7 +38,7 @@ jobs:
       - name: Set up kubeconfig
         run: |
           mkdir -p $HOME/.kube
-          terraform output -raw kubeconfig > $HOME/.kube/config
+          terraform output -raw kubeconfig_path > $HOME/.kube/config
         working-directory: ${{ env.TF_DIR }}
 
       - name: Deploy environment
