@@ -1,8 +1,13 @@
 name: Deploy to Environment
 
 on:
-  pull_request:
-    types: [opened, reopened, closed]
+  push:
+    branches:
+      - master
+      - 'feature/job-interview-task'
+
+env:
+  TF_DIR: terraform/kind
 
 jobs:
   deploy:
@@ -11,24 +16,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Terraform Apply
+        run: terraform apply -var="name=${{ github.head_ref }}" -auto-approve
+        working-directory: ${{ env.TF_DIR }}
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Configure kubectl
-        run: kubectl config set-cluster dev-whizu-corp --server=https://127.0.0.1:58890
+      - name: Set up kubeconfig
+        run: |
+          terraform output -raw kubeconfig > $HOME/.kube/config
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Verify Kubernetes Connection
+        run: kubectl cluster-info
 
       - name: Deploy environment
-        if: github.event.action != 'closed'
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
           mkdir -p argocd/apps/${BRANCH_NAME}
           cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
           kubectl apply -R -f argocd/apps/${BRANCH_NAME}/
 
-      - name: Cleanup environment
-        if: github.event.action == 'closed'
-        run: |
-          BRANCH_NAME="${{ github.head_ref }}"
-          kubectl delete app ${BRANCH_NAME} -n argocd
-          rm -rf argocd/apps/${BRANCH_NAME}
+      - name: Terraform Destroy
+        if: ${{ github.event.pull_request.merged }}
+        run: terraform destroy -auto-approve
+        working-directory: ${{ env.TF_DIR }}
 
