@@ -43,17 +43,26 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Set up kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          terraform output -raw kubeconfig_path > $HOME/.kube/config
-        working-directory: ${{ env.TF_DIR }}
+      - name: create argocd namespace
+        run: kubectl create namespace argocd
 
-      - name: Deploy environment
+      - name: argocd workload
+        run: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+      - name: port forwarding
+        run: kubectl -n argocd port-forward svc/argocd-server -n argocd 8083:80
+
+      # - name: get secret 
+      #   run: kubectl -n argocd get secrets argocd-initial-admin-secret -o json
+
+      - name: Deploy environment frontend, backend and traefik
         run: |
           mkdir -p argocd/apps/${BRANCH_NAME}
           cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
-          kubectl apply -R -f argocd/apps/${BRANCH_NAME}/
+          kubectl apply -f argocd/apps/${BRANCH_NAME}/
+
+      - name: Deploy environment addons
+        run: kubectl apply -f argocd/apps/${BRANCH_NAME}/addons/
 
       - name: Terraform Destroy
         if: ${{ github.event.pull_request.merged }}
