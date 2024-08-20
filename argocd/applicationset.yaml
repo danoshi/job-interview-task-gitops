@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applicationset
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: 'https://github.com/danoshi/job-interview-task-gitops'
+        revision: HEAD
+        directories:
+          - path: 'argocd/apps/*'
+  template:
+    metadata:
+      name: '{{ .path | basename }}-app'
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/danoshi/job-interview-task-gitops'
+        path: '{{ .path }}'
+        targetRevision: HEAD
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: '{{ .path | basename }}'
+      syncPolicy:
+        automated: {}
