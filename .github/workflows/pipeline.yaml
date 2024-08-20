@@ -52,6 +52,9 @@ jobs:
       - name: port forwarding
         run: kubectl -n argocd port-forward svc/argocd-server -n argocd 8083:80
 
+      - name: Wait for argo pods to be ready
+        run: kubectl wait --for=condition=Ready pods --all --namespace=argocd --timeout=5m
+
       # - name: get secret 
       #   run: kubectl -n argocd get secrets argocd-initial-admin-secret -o json
 
@@ -60,6 +63,11 @@ jobs:
           mkdir -p argocd/apps/${BRANCH_NAME}
           cp -r argocd/apps/dev argocd/apps/${BRANCH_NAME}
           kubectl apply -f argocd/apps/${BRANCH_NAME}/
+
+      - name: Wait for backend, traefik to be ready
+        run: |
+          kubectl wait --for=condition=Ready pods --all --namespace=app --timeout=5m
+          kubectl wait --for=condition=Ready pods --all --namespace=traefik --timeout=5m
 
       - name: Deploy environment addons
         run: kubectl apply -f argocd/apps/${BRANCH_NAME}/addons/
