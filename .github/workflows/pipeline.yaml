@@ -15,7 +15,7 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Configure kubectl
-        run: kubectl config set-cluster kind-cluster --server=https://127.0.0.1:6443
+        run: kubectl config set-cluster dev-whizu-corp --server=https://127.0.0.1:58890
 
       - name: Deploy environment
         if: github.event.action != 'closed'
